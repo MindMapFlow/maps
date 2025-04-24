@@ -1,6 +1,6 @@
-![Auto Assign](https://github.com/MindMapFlow/demo-repository/actions/workflows/auto-assign.yml/badge.svg)
+!(https://github.com/MindMapFlow/demo-repository/actions/workflows/auto-assign.yml/badge.svg)
 
-![Proof HTML](https://github.com/MindMapFlow/demo-repository/actions/workflows/proof-html.yml/badge.svg)
+!(https://github.com/MindMapFlow/demo-repository/actions/workflows/proof-html.yml/badge.svg)
 
 # Welcome to your organization'smaps
 1) RoadMap — Путь по программе обучения (Цифровой силабус)
