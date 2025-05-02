@@ -4,14 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Syllabus</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const majorSelect = document.querySelector('#id_major');
+            const semesterSelect = document.querySelector('#id_semester');
+            const courseSelect = document.querySelector('#id_course');
+            const courses = {{ courses|safe }};
+
+            function updateCourses() {
+                const majorId = majorSelect.value;
+                const semester = semesterSelect.value;
+                courseSelect.innerHTML = '<option value="">---------</option>';
+                courses.forEach(course => {
+                    if (course.major_id == majorId && course.semester == semester) {
+                        const option = document.createElement('option');
+                        option.value = course.id;
+                        option.text = course.name;
+                        courseSelect.appendChild(option);
+                    }
+                });
+            }
+
+            majorSelect.addEventListener('change', updateCourses);
+            semesterSelect.addEventListener('change', updateCourses);
+        });
+    </script>
 </head>
 <body>
     <h1>Upload Syllabus</h1>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <input type="file" name="syllabus_file" accept=".pdf,.doc,.docx" required>
+        <div>
+            <label for="{{ form.major.id_for_label }}">Specialty:</label>
+            {{ form.major }}
+        </div>
+        <div>
+            <label for="{{ form.semester.id_for_label }}">Semester:</label>
+            {{ form.semester }}
+        </div>
+        <div>
+            <label for="{{ form.course.id_for_label }}">Course:</label>
+            {{ form.course }}
+        </div>
+        <div>
+            <label for="{{ form.syllabus_file.id_for_label }}">Syllabus File:</label>
+            {{ form.syllabus_file }}
+        </div>
+        {% if error %}
+            <p>{{ error }}</p>
+        {% endif %}
         <button type="submit">Upload</button>
     </form>
     <a href="{% url 'roadmap_home' %}">Back to RoadMap</a>
+    {% if syllabus_data %}
+        <div>
+            <h2>Syllabus Structure</h2>
+            <p>Specialty: {{ syllabus_data.major }}</p>
+            <p>Semester: {{ syllabus_data.semester }}</p>
+            <p>Course: {{ syllabus_data.course }}</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Week</th>
+                        <th>Topic</th>
+                        <th>Status</th>
+                        <th>Sources</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week, data in syllabus_data.weeks.items %}
+                        <tr>
+                            <td>{{ week }}</td>
+                            <td>{{ data.topic_name }}</td>
+                            <td>{{ data.status|yesno:"Completed,Not Started" }}</td>
+                            <td>{{ data.sourse|join:", " }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
 </body>
 </html>

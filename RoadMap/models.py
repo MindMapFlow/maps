@@ -11,7 +11,7 @@ class Major(models.Model):
 
 class Course(models.Model):
     name = models.CharField(max_length=200)
-    major = models.ForeignKey(Major, on_delete=models.CASCADE, related_name='courses')
+    major = models.ForeignKey(Major, on_delete=models.CASCADE, related_name='roadmap_courses')
     semester = models.CharField(max_length=10, choices=[
         ('1-1', '1st Year, 1st Semester'),
         ('1-2', '1st Year, 2nd Semester'),
@@ -26,3 +26,11 @@ class Course(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.major.name}, {self.semester})"
+    
+class Map(models.Model):
+    major = models.ForeignKey(Major, on_delete=models.CASCADE, related_name='roadmap_maps')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='roadmap_maps')
+    weeks = models.JSONField(default=dict)
+
+    def __str__(self):
+        return f"Map for {self.course.name} ({self.major.name}, {self.course.semester})"
