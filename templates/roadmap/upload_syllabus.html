@@ -4,12 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Syllabus</title>
+    <style>
+        .source-input {
+            margin-bottom: 5px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .source-input input {
+            margin-right: 5px;
+        }
+        .source-list {
+            margin-bottom: 10px;
+        }
+        .source-item {
+            margin-right: 10px;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/django-jinja@0.3.0/dist/django-jinja.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const majorSelect = document.querySelector('#id_major');
             const semesterSelect = document.querySelector('#id_semester');
             const courseSelect = document.querySelector('#id_course');
-            const courses = {{ courses|safe }};
+            const courses = JSON.parse('{{ courses|escapejs }}');
+            const deleteButton = document.querySelector('#delete-selected');
+            const saveButton = document.querySelector('#save-syllabus');
 
             function updateCourses() {
                 const majorId = majorSelect.value;
@@ -23,6 +45,102 @@
                         courseSelect.appendChild(option);
                     }
                 });
+            }
+
+            function deleteSelectedRows() {
+                const checkboxes = document.querySelectorAll('input[name="delete-checkbox"]:checked');
+                if (checkboxes.length === 0) {
+                    alert('Select at least one row to delete.');
+                    return;
+                }
+                checkboxes.forEach(checkbox => {
+                    checkbox.closest('tr').remove();
+                });
+            }
+
+            function addSource(button) {
+                const row = button.closest('tr');
+                const input = row.querySelector('.source-input input');
+                const sourceList = row.querySelector('.source-list');
+                const sourceText = input.value.trim();
+
+                if (!sourceText) {
+                    alert('Source cannot be empty.');
+                    return;
+                }
+
+                const sources = sourceList.textContent ? sourceList.textContent.split(', ') : [];
+                if (sources.includes(sourceText)) {
+                    alert('This source already exists.');
+                    return;
+                }
+
+                sources.push(sourceText);
+                sourceList.textContent = sources.join(', ');
+                input.value = '';
+            }
+
+            function saveSyllabus() {
+                const rows = document.querySelectorAll('tbody tr');
+                const weeks = {};
+                rows.forEach(row => {
+                    const week = row.cells[1].textContent;
+                    const topic_name = row.cells[2].textContent;
+                    const status = row.cells[3].textContent === 'Completed';
+                    const sources = row.querySelector('.source-list').textContent
+                        ? row.querySelector('.source-list').textContent.split(', ')
+                        : [];
+
+                    weeks[week] = {
+                        topic_name,
+                        status,
+                        sourse: sources
+                    };
+                });
+
+                const syllabusData = {
+                    major: '{{ syllabus_data.major }}',
+                    year: '{{ syllabus_data.semester }}',
+                    course: '{{ syllabus_data.course }}',
+                    weeks
+                };
+
+                fetch('/roadmap/save-syllabus/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(syllabusData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Syllabus saved successfully!');
+                    } else {
+                        alert('Error saving syllabus: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to save syllabus.');
+                });
+            }
+
+            document.querySelectorAll('.add-source').forEach(button => {
+                button.addEventListener('click', () => addSource(button));
+            });
+
+            if (deleteButton) {
+                deleteButton.addEventListener('click', deleteSelectedRows);
+            } else {
+                console.warn('Delete button not found');
+            }
+
+            if (saveButton) {
+                saveButton.addEventListener('click', saveSyllabus);
+            } else {
+                console.warn('Save button not found');
             }
 
             majorSelect.addEventListener('change', updateCourses);
@@ -47,7 +165,7 @@
             {{ form.course }}
         </div>
         <div>
-            <label for="{{ form.syllabus_file.id_for_label }}">Syllabus File:</label>
+            <label for="{{ form.sylonabus_file.id_for_label }}">Syllabus File:</label>
             {{ form.syllabus_file }}
         </div>
         {% if error %}
@@ -62,9 +180,14 @@
             <p>Specialty: {{ syllabus_data.major }}</p>
             <p>Semester: {{ syllabus_data.semester }}</p>
             <p>Course: {{ syllabus_data.course }}</p>
+            <div>
+                <button id="delete-selected">Delete Selected</button>
+                <button id="save-syllabus">Save</button>
+            </div>
             <table>
                 <thead>
                     <tr>
+                        <th></th>
                         <th>Week</th>
                         <th>Topic</th>
                         <th>Status</th>
@@ -74,10 +197,17 @@
                 <tbody>
                     {% for week, data in syllabus_data.weeks.items %}
                         <tr>
+                            <td><input type="checkbox" name="delete-checkbox"></td>
                             <td>{{ week }}</td>
                             <td>{{ data.topic_name }}</td>
                             <td>{{ data.status|yesno:"Completed,Not Started" }}</td>
-                            <td>{{ data.sourse|join:", " }}</td>
+                            <td>
+                                <div class="source-list">{{ data.sourse|join:", " }}</div>
+                                <div class="source-input">
+                                    <input type="text" placeholder="Add source">
+                                    <button type="button" class="add-source">Add</button>
+                                </div>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>
